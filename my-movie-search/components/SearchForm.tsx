@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
 import { useInfiniteQuery } from 'react-query';
-import { useStoreInstance } from '../pages/_app'; // Make sure to use the correct path
+import { useStoreInstance } from '../pages/_app';
 import { debounce } from 'lodash';
 
 export interface Movie {
