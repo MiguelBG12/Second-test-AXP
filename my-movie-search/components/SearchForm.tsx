@@ -4,12 +4,37 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import axios from 'axios';
 import { useInfiniteQuery } from 'react-query';
-import { useStoreInstance } from '../pages/_app';
+import { useStoreInstance } from '../pages/_app'; // Make sure to use the correct path
+import { debounce } from 'lodash';
+
+export interface Movie {
+  adult: boolean;
+  backdrop_path: string;
+  genre_ids: number[];
+  id: number;
+  original_language: string;
+  original_title: string;
+  overview: string;
+  popularity: number;
+  poster_path: string;
+  release_date: string;
+  title: string;
+  video: boolean;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface ApiResponse {
+  page: number;
+  results: Movie[];
+  total_pages: number;
+  total_results: number;
+}
 
 // Function to fetch movies from the TMDB API
-const fetchMovies = async (key: string[], page: number) => {
+const fetchMovies = async (key: string[], page: number): Promise<Movie[]> => {
   try {
-    const response = await axios.get(
+    const response = await axios.get<ApiResponse>(
       `https://api.themoviedb.org/3/search/movie?query=${key[1]}&page=${page}&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
       {
         headers: {
@@ -18,6 +43,8 @@ const fetchMovies = async (key: string[], page: number) => {
       }
     );
 
+    console.log('Movie API Response:', response.data);
+
     return response.data.results;
   } catch (error) {
     console.error('Error fetching movies:', error);
@@ -25,19 +52,25 @@ const fetchMovies = async (key: string[], page: number) => {
   }
 };
 
-// Custom hook to handle the movie query
+// Custom hook for using infinite query to fetch movies
 export const useMovies = (searchTerm: string) => {
-  return useInfiniteQuery(['movies', searchTerm], ({ pageParam = 1 }) => fetchMovies(['movies', searchTerm], pageParam));
+  return useInfiniteQuery(['movies', searchTerm], ({ pageParam = 1 }) => {
+    const movies = fetchMovies(['movies', searchTerm], pageParam);
+    console.log('Fetched movies:', movies);
+    return movies;
+  });
 };
 
-// Functional component SearchForm
+
+// React functional component for the search form
 const SearchForm: React.FC = () => {
-  // Access the setSearchTerm function from the store using the custom hook useStoreInstance
+  // Access the setSearchTerm function from the Zustand store
   const setSearchTerm = useStoreInstance((state) => state.setSearchTerm);
-  // Get the initial search term from the store state
+
+  // Get the initial search term from the Zustand store
   const initialSearchTerm = useStoreInstance.getState().searchTerm;
 
-  // Form configuration using react-hook-form with Zod for validation
+  // React Hook Form configuration
   const { register, handleSubmit, formState } = useForm({
     resolver: zodResolver(z.object({
       searchTerm: z.string().min(1).max(10),
@@ -47,14 +80,18 @@ const SearchForm: React.FC = () => {
     },
   });
 
-  // Form submission handler function
+  // Function to handle form submission
   const onSubmit = (data: { searchTerm: string }) => {
+    console.log('Search Term:', data.searchTerm);
     setSearchTerm(data.searchTerm);
   };
 
+  // Debounce the form submission to avoid frequent API calls
+  const debouncedSubmit = debounce(onSubmit, 300);
+
+  // Render the search form
   return (
-    // Render the form with input field, error handling, and search button
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(debouncedSubmit)}>
       <input {...register('searchTerm')} placeholder="Search movies" />
       {formState.errors.searchTerm && (
         <p>Error: {formState.errors.searchTerm.message}</p>
