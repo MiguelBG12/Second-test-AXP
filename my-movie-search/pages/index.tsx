@@ -1,33 +1,24 @@
-import React from 'react';
-import SearchForm, { Movie } from '../components/SearchForm';
-import { useMovies } from '../components/SearchForm';
+import React, { useState } from 'react';
+import SearchForm from '../components/SearchForm'; // Import the SearchForm component
+import MovieList from '../components/MovieList'; // Import the MovieList component
 
+// Define the Home component as a functional component
 const Home: React.FC = () => {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useMovies('');
+  // Define state to hold the search term
+  const [searchTerm, setSearchTerm] = useState('');
 
-  console.log('Movies Data:', data);
+  // Define a function to handle the search term submission
+  const handleSearch = (term: string) => {
+    setSearchTerm(term); // Update the search term state
+  };
 
+  // Render the components: SearchForm and MovieList
   return (
     <div>
-      <h1>Movie Search App</h1>
-      <SearchForm />
-      <ul>
-        {data?.pages.map((page, index) => {
-          console.log('Page Data:', page);
-          return (
-            <React.Fragment key={index}>
-              {page.map((movie: Movie) => (
-                <li key={movie.id}>{movie.title}</li>
-              ))}
-            </React.Fragment>
-          );
-        })}
-      </ul>
-      {hasNextPage && (
-        <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-          {isFetchingNextPage ? 'Loading more...' : 'Load More'}
-        </button>
-      )}
+      <h1>Movie Search App</h1> {/* Render a heading for the app */}
+      <SearchForm onSubmit={handleSearch} /> {/* Render the SearchForm component */}
+      {/* Render the MovieList component only if searchTerm is not empty */}
+      {searchTerm && <MovieList searchTerm={searchTerm} />}
     </div>
   );
 };
