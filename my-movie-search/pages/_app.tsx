@@ -1,36 +1,43 @@
+import React from 'react';
 import { AppProps } from 'next/app';
-import { ReactQueryDevtools } from 'react-query/devtools';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import { create, State } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { Hydrate } from 'react-query/hydration';
+import create from 'zustand'; // Import the create function from zustand
+import { persist } from 'zustand/middleware'; // Import the persist middleware from zustand
 
-type Store = {
-  searchTerm: string;
-  setSearchTerm: (searchTerm: string) => void;
-  tmdbApiKey: string;
-};
+// Define the shape of the store state
+export interface StoreState {
+  searchTerm: string; // Search term stored in the state
+}
 
-// Create the store without persistence
-export const useStoreInstance = create<Store>((set, get) => ({
-  searchTerm: '',
-  setSearchTerm: (searchTerm: string) => set({ searchTerm }),
-  tmdbApiKey: process.env.NEXT_PUBLIC_TMDB_API_KEY || '',
+// Create the warehouse without persistence initially
+export const useStore = create<StoreState>(() => ({
+  searchTerm: '', // Initial state without persistence
 }));
 
-// Apply persistence middleware to the store
-const persistedUseStoreInstance = persist<Store>(useStoreInstance, {
-  name: 'movie-search-store',
+// Apply persistence middleware
+export const persistedStore = persist(useStore, {
+  name: 'search-storage', // Persistent store name
 });
 
-export const queryClient = new QueryClient();
 
+// MyApp component that wraps the Next.js App component
 function MyApp({ Component, pageProps }: AppProps) {
+  const queryClientRef = React.useRef<QueryClient>();
+  
+  // Initialize a QueryClient instance if not already initialized
+  if (!queryClientRef.current) {
+    queryClientRef.current = new QueryClient();
+  }
+
+  // Render the QueryClientProvider and Hydrate components to provide React Query functionalities
   return (
-    <QueryClientProvider client={queryClient}>
-      <Component {...pageProps} />
-      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
+    <QueryClientProvider client={queryClientRef.current}>
+      <Hydrate state={pageProps.dehydratedState}>
+        <Component {...pageProps} /> {/* Render the provided component */}
+      </Hydrate>
     </QueryClientProvider>
   );
 }
 
-export default MyApp;
+export default MyApp; // Export the MyApp component as the default export
