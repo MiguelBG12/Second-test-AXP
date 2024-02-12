@@ -20,9 +20,9 @@
         # Create a file called .env.local in the root of your project
         > touch .env.local
 
-        # Configure your api key and access token as environment variables 
+        # Set your API key and access token as environment variables in the '.env.local' file 
         > NEXT_PUBLIC_TMDB_API_KEY='Here copy your api key' 
-        > NEXT_PUBLIC_ACCESS_TOKEN='Here copy your token'
+        > NEXT_PUBLIC_ACCESS_TOKEN='Here copy your access token'
 
 
         # Install the dependencies
