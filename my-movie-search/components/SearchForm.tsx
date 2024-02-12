@@ -1,101 +1,44 @@
 import React from 'react';
+import { SubmitHandler, FieldValues } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import axios from 'axios';
-import { useInfiniteQuery } from 'react-query';
-import { useStoreInstance } from '../pages/_app';
-import { debounce } from 'lodash';
+import { useStore } from '../pages/_app';
 
-export interface Movie {
-  adult: boolean;
-  backdrop_path: string;
-  genre_ids: number[];
-  id: number;
-  original_language: string;
-  original_title: string;
-  overview: string;
-  popularity: number;
-  poster_path: string;
-  release_date: string;
-  title: string;
-  video: boolean;
-  vote_average: number;
-  vote_count: number;
+// Define props for the SearchForm component
+interface SearchFormProps {
+  onSubmit: (searchTerm: string) => void; // Callback function triggered on form submission
 }
 
-export interface ApiResponse {
-  page: number;
-  results: Movie[];
-  total_pages: number;
-  total_results: number;
-}
-
-// Function to fetch movies from the TMDB API
-const fetchMovies = async (key: string[], page: number): Promise<Movie[]> => {
-  try {
-    const response = await axios.get<ApiResponse>(
-      `https://api.themoviedb.org/3/search/movie?query=${key[1]}&page=${page}&api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`,
-        },
-      }
-    );
-
-    console.log('Movie API Response:', response.data);
-
-    return response.data.results;
-  } catch (error) {
-    console.error('Error fetching movies:', error);
-    return [];
-  }
-};
-
-// Custom hook for using infinite query to fetch movies
-export const useMovies = (searchTerm: string) => {
-  return useInfiniteQuery(['movies', searchTerm], ({ pageParam = 1 }) => {
-    const movies = fetchMovies(['movies', searchTerm], pageParam);
-    console.log('Fetched movies:', movies);
-    return movies;
-  });
-};
-
-
-// React functional component for the search form
-const SearchForm: React.FC = () => {
-  // Access the setSearchTerm function from the Zustand store
-  const setSearchTerm = useStoreInstance((state) => state.setSearchTerm);
-
-  // Get the initial search term from the Zustand store
-  const initialSearchTerm = useStoreInstance.getState().searchTerm;
-
-  // React Hook Form configuration
+// SearchForm component
+const SearchForm: React.FC<SearchFormProps> = ({ onSubmit }) => {
+  // Initialize form methods and state using useForm hook
   const { register, handleSubmit, formState } = useForm({
+    // Use zodResolver to validate form inputs using Zod schema
     resolver: zodResolver(z.object({
-      searchTerm: z.string().min(1).max(10),
+      searchTerm: z.string().min(1).max(10), // Define validation rules for searchTerm
     })),
-    defaultValues: {
-      searchTerm: initialSearchTerm,
-    },
   });
 
-  // Function to handle form submission
-  const onSubmit = (data: { searchTerm: string }) => {
-    console.log('Search Term:', data.searchTerm);
-    setSearchTerm(data.searchTerm);
-  };
+  // Access searchTerm state from the global store
+  const { searchTerm } = useStore.getState();
 
-  // Debounce the form submission to avoid frequent API calls
-  const debouncedSubmit = debounce(onSubmit, 300);
+  // Define handler for form submission
+  const handleFormSubmit: SubmitHandler<FieldValues> = (data) => {
+    // Call onSubmit callback with the search term from form data
+    onSubmit(data.searchTerm);
+  };
 
   // Render the search form
   return (
-    <form onSubmit={handleSubmit(debouncedSubmit)}>
-      <input {...register('searchTerm')} placeholder="Search movies" />
+    <form onSubmit={handleSubmit(handleFormSubmit)}>
+      {/* Input field for search term */}
+      <input {...register('searchTerm')} defaultValue={searchTerm} placeholder="Search movies" />
+      {/* Display error message if searchTerm validation fails */}
       {formState.errors.searchTerm && (
         <p>Error: {formState.errors.searchTerm.message}</p>
       )}
+      {/* Submit button */}
       <button type="submit">Search</button>
     </form>
   );
